@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper">
+
+    <resultMap id="BaseResultMap" type="insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo">
+            <id property="id" column="id" />
+            <result property="jobName" column="job_name" />
+            <result property="cronExpression" column="cron_expression" />
+            <result property="shardingCount" column="sharding_count" />
+            <result property="scriptFileId" column="script_file_id" />
+            <result property="jobStatus" column="job_status" />
+            <result property="description" column="description" />
+            <result property="createTime" column="create_time" />
+            <result property="updateTime" column="update_time" />
+            <result property="lastExecuteTime" column="last_execute_time" />
+            <result property="nextExecuteTime" column="next_execute_time" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,job_name,cron_expression,sharding_count,script_file_id,job_status,
+        description,create_time,update_time,last_execute_time,next_execute_time
+    </sql>
+</mapper>

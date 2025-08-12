@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS script_files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    job_name VARCHAR(255) NOT NULL UNIQUE,
+    file_name VARCHAR(255) NOT NULL,
+    file_content LONGTEXT NOT NULL,
+    file_type VARCHAR(50) NOT NULL,
+    file_size BIGINT NOT NULL,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS job_info (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    job_name VARCHAR(255) NOT NULL UNIQUE,
+    cron_expression VARCHAR(255) NOT NULL,
+    sharding_count INT NOT NULL DEFAULT 1,
+    script_file_id BIGINT NOT NULL,
+    job_status VARCHAR(50) NOT NULL DEFAULT 'STOPPED', -- RUNNING, STOPPED, PAUSED
+    description TEXT,
+    create_time DATETIME NOT NULL,
+    update_time DATETIME NOT NULL,
+    last_execute_time DATETIME,
+    next_execute_time DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
