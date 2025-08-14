@@ -1,24 +1,25 @@
 CREATE TABLE IF NOT EXISTS script_files (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    job_name VARCHAR(255) NOT NULL UNIQUE,
-    file_name VARCHAR(255) NOT NULL,
-    file_content LONGTEXT NOT NULL,
-    file_type VARCHAR(50) NOT NULL,
-    file_size BIGINT NOT NULL,
-    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                                            id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+                                            job_name     VARCHAR(255) NOT NULL UNIQUE COMMENT '作业名称',
+                                            file_name    VARCHAR(255) NOT NULL COMMENT '脚本文件名',
+                                            file_content LONGTEXT     NOT NULL COMMENT '脚本内容',
+                                            command_args TEXT                  DEFAULT NULL COMMENT '启动命令行参数，多个参数用空格分隔',
+                                            file_type    VARCHAR(50)  NOT NULL COMMENT '脚本类型 (SHELL, PYTHON)',
+                                            file_size    BIGINT       NOT NULL COMMENT '脚本文件大小',
+                                            create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                            update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS job_info (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    job_name VARCHAR(255) NOT NULL UNIQUE,
-    cron_expression VARCHAR(255) NOT NULL,
-    sharding_count INT NOT NULL DEFAULT 1,
-    script_file_id BIGINT NOT NULL,
-    job_status VARCHAR(50) NOT NULL DEFAULT 'STOPPED', -- RUNNING, STOPPED, PAUSED
-    description TEXT,
-    create_time DATETIME NOT NULL,
-    update_time DATETIME NOT NULL,
-    last_execute_time DATETIME,
-    next_execute_time DATETIME
+                                        id                BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+                                        job_name          VARCHAR(255) NOT NULL UNIQUE COMMENT '作业名称',
+                                        cron_expression   VARCHAR(255) NOT NULL COMMENT 'Cron表达式',
+                                        sharding_count    INT          NOT NULL DEFAULT 1 COMMENT '分片数量',
+                                        script_file_id    BIGINT       NOT NULL COMMENT '脚本文件ID',
+                                        job_status        VARCHAR(50)  NOT NULL DEFAULT 'STOPPED' COMMENT '作业状态 (STARTED, STOPPED, PAUSED)',
+                                        description       TEXT COMMENT '作业描述',
+                                        create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                        update_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                        last_execute_time DATETIME              DEFAULT NULL COMMENT '上次执行时间',
+                                        next_execute_time DATETIME              DEFAULT NULL COMMENT '下次执行时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

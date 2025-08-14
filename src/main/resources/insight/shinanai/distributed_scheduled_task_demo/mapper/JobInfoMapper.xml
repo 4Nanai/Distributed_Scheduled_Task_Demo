@@ -22,4 +22,11 @@
         id,job_name,cron_expression,sharding_count,script_file_id,job_status,
         description,create_time,update_time,last_execute_time,next_execute_time
     </sql>
+    <select id="listAllRunningJobs"
+            resultType="insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM job_info
+        WHERE job_status = 'RUNNING'
+    </select>
 </mapper>

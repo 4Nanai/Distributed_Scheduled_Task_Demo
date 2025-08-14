@@ -1,7 +1,7 @@
 package insight.shinanai.distributed_scheduled_task_demo.service;
 
-import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 import com.baomidou.mybatisplus.extension.service.IService;
+import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -13,5 +13,5 @@ import java.io.IOException;
 */
 public interface ScriptFilesService extends IService<ScriptFiles> {
 
-    ScriptFiles saveScriptFile(MultipartFile scriptFile, String jobName) throws IOException;
+    ScriptFiles saveScriptFile(MultipartFile scriptFile, String commandArgs, String jobName) throws IOException;
 }

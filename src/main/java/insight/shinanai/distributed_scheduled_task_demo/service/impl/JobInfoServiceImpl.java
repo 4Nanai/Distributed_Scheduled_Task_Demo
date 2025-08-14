@@ -2,17 +2,21 @@ package insight.shinanai.distributed_scheduled_task_demo.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
+import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 import insight.shinanai.distributed_scheduled_task_demo.job.RunScriptJob;
-import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper;
+import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
-import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.JobBootstrap;
 import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.ScheduleJobBootstrap;
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,8 +39,8 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
         this.registryCenter = registryCenter;
     }
 
-    @Override
-    public void createScriptJob(String jobName, String cron, int shardingCount, Long scriptId) {
+    private void createScriptJob(String jobName, String cron, int shardingCount, Long scriptId,
+                                 String description) {
         try {
             if (jobBootstrapMap.containsKey(jobName)) {
                 throw new RuntimeException("Job with name " + jobName + " already exists.");
@@ -48,30 +52,20 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                           shardingCount,
                                           scriptId,
                                           "RUNNING",
-                                          null,
+                                          description,
                                           null,
                                           null,
                                           null,
                                           null
             );
             this.save(jobInfo);
-
-            RunScriptJob runScriptJob = new RunScriptJob(jobName, scriptId, scriptFilesService);
-
-            JobConfiguration jobConfiguration = generateJobConfiguration(jobName, cron, shardingCount);
-
-            ScheduleJobBootstrap scheduleJobBootstrap = new ScheduleJobBootstrap(registryCenter,
-                                                                                 runScriptJob,
-                                                                                 jobConfiguration
-            );
-            scheduleJobBootstrap.schedule();
-            jobBootstrapMap.put(jobName, scheduleJobBootstrap);
-
-            log.info("Scheduled job: {}, Cron: {}, Shards: {}, Script ID: {}",
+            scheduleScriptJob(jobName, cron, shardingCount, scriptId);
+            log.info("Scheduled job: {}, Cron: {}, Shards: {}, Script ID: {}, Description: {}",
                      jobName,
                      cron,
                      shardingCount,
-                     scriptId
+                     scriptId,
+                     description
             );
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
@@ -79,16 +73,42 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
 
     }
 
+    @Override
+    public void scheduleScriptJob(String jobName, String cron, int shardingCount, Long scriptId) {
+        RunScriptJob runScriptJob = new RunScriptJob(jobName, scriptId, scriptFilesService);
+        JobConfiguration jobConfiguration = generateJobConfiguration(jobName, cron, shardingCount);
+        ScheduleJobBootstrap scheduleJobBootstrap = new ScheduleJobBootstrap(registryCenter,
+                                                                             runScriptJob,
+                                                                             jobConfiguration
+        );
+        scheduleJobBootstrap.schedule();
+        jobBootstrapMap.put(jobName, scheduleJobBootstrap);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void registerScriptJob(String jobName,
+                                  String cronExpression,
+                                  int shardingCount,
+                                  MultipartFile scriptFile,
+                                  String commandArgs, String description) throws IOException {
+        ScriptFiles scriptFiles = scriptFilesService.saveScriptFile(scriptFile, commandArgs, jobName);
+        this.createScriptJob(jobName, cronExpression, shardingCount, scriptFiles.getId(), description);
+    }
+
+    @Override
+    public List<JobInfo> listAllRunningJobs() {
+        return this.baseMapper.listAllRunningJobs();
+    }
+
     private JobConfiguration generateJobConfiguration(String jobName, String cron, int shardingCount) {
         return JobConfiguration.newBuilder(jobName, shardingCount)
                 .cron(cron)
                 .shardingItemParameters(generateShardingParameters(shardingCount))
-                .jobExecutorServiceHandlerType("LOG")
                 .overwrite(true)
                 .failover(true)
                 .misfire(true)
                 .disabled(false)
-                .jobListenerTypes("LOG")
                 .build();
     }
 

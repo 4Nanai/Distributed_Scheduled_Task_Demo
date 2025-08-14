@@ -1,7 +1,7 @@
 package insight.shinanai.distributed_scheduled_task_demo.mapper;
 
-import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 
 /**
 * @author chitose

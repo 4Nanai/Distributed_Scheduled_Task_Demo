@@ -9,6 +9,7 @@
             <result property="jobName" column="job_name" />
             <result property="fileName" column="file_name" />
             <result property="fileContent" column="file_content" />
+        <result property="commandArgs" column="command_args"/>
             <result property="fileType" column="file_type" />
             <result property="fileSize" column="file_size" />
             <result property="createTime" column="create_time" />
@@ -16,7 +17,8 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,job_name,file_name,file_content,file_type,file_size,
+        id
+        ,job_name,file_name,file_content,command_args,file_type,file_size,
         create_time,update_time
     </sql>
 </mapper>
