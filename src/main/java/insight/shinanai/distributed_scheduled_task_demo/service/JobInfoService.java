@@ -14,7 +14,7 @@ import java.util.List;
  */
 public interface JobInfoService extends IService<JobInfo> {
 
-    void scheduleScriptJob(String jobName, String cron, int shardingCount, Long scriptId);
+    void scheduleScriptJob(Long jobId, String jobName, String cron, int shardingCount, Long scriptId);
 
     void registerScriptJob(String jobName,
                            String cronExpression,

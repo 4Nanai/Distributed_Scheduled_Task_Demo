@@ -24,6 +24,9 @@ public class ScriptFilesServiceImpl extends ServiceImpl<ScriptFilesMapper, Scrip
         String fileContent = new String(scriptFile.getBytes(), StandardCharsets.UTF_8);
         String fileName = scriptFile.getOriginalFilename();
         String fileType = fileName != null ? fileName.substring(fileName.lastIndexOf('.') + 1) : "";
+        if (!"sh".equals(fileType) && !"py".equals(fileType)) {
+            throw new RuntimeException("Unsupported script type: " + fileType);
+        }
         ScriptFiles scriptFiles = new ScriptFiles(null,
                                                   jobName,
                                                   fileName,

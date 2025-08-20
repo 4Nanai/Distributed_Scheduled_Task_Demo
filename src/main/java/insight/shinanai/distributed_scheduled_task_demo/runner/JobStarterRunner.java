@@ -37,7 +37,8 @@ public class JobStarterRunner implements ApplicationRunner {
             CompletableFuture<?>[] futures = jobInfos.stream()
                     .map(job -> CompletableFuture.runAsync(() -> {
                         try {
-                            jobInfoService.scheduleScriptJob(job.getJobName(),
+                            jobInfoService.scheduleScriptJob(job.getId(),
+                                                             job.getJobName(),
                                                              job.getCronExpression(),
                                                              job.getShardingCount(),
                                                              job.getScriptFileId()

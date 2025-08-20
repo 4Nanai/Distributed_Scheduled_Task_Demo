@@ -23,3 +23,19 @@ CREATE TABLE IF NOT EXISTS job_info (
                                         last_execute_time DATETIME              DEFAULT NULL COMMENT '上次执行时间',
                                         next_execute_time DATETIME              DEFAULT NULL COMMENT '下次执行时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS job_log
+(
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    job_id        BIGINT       NOT NULL COMMENT '作业ID',
+    job_name      VARCHAR(255) NOT NULL COMMENT '作业名称',
+    sharding_item INT          NOT NULL COMMENT '分片项',
+    log_level     VARCHAR(20)  NOT NULL COMMENT '日志级别 (INFO, WARN, ERROR, DEBUG)',
+    message       TEXT COMMENT '日志信息',
+    create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    execution_id  VARCHAR(255) NOT NULL COMMENT '执行ID',
+    INDEX idx_job_id_create_time (job_id, create_time),
+    INDEX idx_created_time (create_time)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;

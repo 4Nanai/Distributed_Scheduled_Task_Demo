@@ -1,6 +1,7 @@
 package insight.shinanai.distributed_scheduled_task_demo.job;
 
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
+import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import org.apache.shardingsphere.elasticjob.api.ShardingContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +31,15 @@ class RunScriptJobTest {
 
     private RunScriptJob runScriptJob;
 
+    private static final Long JOB_ID = 1L;
     private static final String JOB_NAME = "test-job";
     private static final Long SCRIPT_FILE_ID = 1L;
+    @Mock
+    private JobLogService jobLogService;
 
     @BeforeEach
     void setUp() {
-        runScriptJob = new RunScriptJob(JOB_NAME, SCRIPT_FILE_ID, scriptFilesService);
+        runScriptJob = new RunScriptJob(JOB_ID, JOB_NAME, SCRIPT_FILE_ID, scriptFilesService, jobLogService);
     }
 
     @Test

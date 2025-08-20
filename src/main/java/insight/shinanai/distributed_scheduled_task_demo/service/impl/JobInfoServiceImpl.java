@@ -6,6 +6,7 @@ import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
 import insight.shinanai.distributed_scheduled_task_demo.job.RunScriptJob;
 import insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
+import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
@@ -33,10 +34,13 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     private final Map<String, ScheduleJobBootstrap> jobBootstrapMap = new ConcurrentHashMap<>();
     private final ScriptFilesService scriptFilesService;
     private final CoordinatorRegistryCenter registryCenter;
+    private final JobLogService jobLogService;
 
-    public JobInfoServiceImpl(ScriptFilesService scriptFilesService, CoordinatorRegistryCenter registryCenter) {
+    public JobInfoServiceImpl(ScriptFilesService scriptFilesService, CoordinatorRegistryCenter registryCenter,
+                              JobLogService jobLogService) {
         this.scriptFilesService = scriptFilesService;
         this.registryCenter = registryCenter;
+        this.jobLogService = jobLogService;
     }
 
     private void createScriptJob(String jobName, String cron, int shardingCount, Long scriptId,
@@ -59,7 +63,7 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                           null
             );
             this.save(jobInfo);
-            scheduleScriptJob(jobName, cron, shardingCount, scriptId);
+            scheduleScriptJob(jobInfo.getId(), jobName, cron, shardingCount, scriptId);
             log.info("Scheduled job: {}, Cron: {}, Shards: {}, Script ID: {}, Description: {}",
                      jobName,
                      cron,
@@ -74,8 +78,8 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     }
 
     @Override
-    public void scheduleScriptJob(String jobName, String cron, int shardingCount, Long scriptId) {
-        RunScriptJob runScriptJob = new RunScriptJob(jobName, scriptId, scriptFilesService);
+    public void scheduleScriptJob(Long jobId, String jobName, String cron, int shardingCount, Long scriptId) {
+        RunScriptJob runScriptJob = new RunScriptJob(jobId, jobName, scriptId, scriptFilesService, jobLogService);
         JobConfiguration jobConfiguration = generateJobConfiguration(jobName, cron, shardingCount);
         ScheduleJobBootstrap scheduleJobBootstrap = new ScheduleJobBootstrap(registryCenter,
                                                                              runScriptJob,

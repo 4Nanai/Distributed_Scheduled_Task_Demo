@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="insight.shinanai.distributed_scheduled_task_demo.mapper.JobLogMapper">
+
+    <resultMap id="BaseResultMap" type="insight.shinanai.distributed_scheduled_task_demo.domain.JobLog">
+        <id property="id" column="id"/>
+        <result property="jobId" column="job_id"/>
+        <result property="jobName" column="job_name"/>
+        <result property="shardingItem" column="sharding_item"/>
+        <result property="logLevel" column="log_level"/>
+        <result property="message" column="message"/>
+        <result property="createTime" column="create_time"/>
+        <result property="executionId" column="execution_id"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id
+        ,job_id,job_name,sharding_item,log_level,message,
+        create_time,execution_id
+    </sql>
+    <select id="getRecentLogsLimitHistoryCount"
+            resultType="insight.shinanai.distributed_scheduled_task_demo.domain.JobLog">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM
+        job_log
+        WHERE
+        job_id = #{jobId}
+        ORDER BY
+        create_time ASC,
+        sharding_item ASC LIMIT #{historyCount}
+    </select>
+</mapper>
