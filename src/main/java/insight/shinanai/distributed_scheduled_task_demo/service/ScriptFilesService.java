@@ -13,5 +13,5 @@ import java.io.IOException;
 */
 public interface ScriptFilesService extends IService<ScriptFiles> {
 
-    ScriptFiles saveScriptFile(MultipartFile scriptFile, String commandArgs, String jobName) throws IOException;
+    ScriptFiles saveScriptFile(MultipartFile scriptFile, String jobName) throws IOException;
 }

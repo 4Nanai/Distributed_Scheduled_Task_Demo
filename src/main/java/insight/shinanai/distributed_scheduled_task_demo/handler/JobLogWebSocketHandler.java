@@ -3,10 +3,8 @@ package insight.shinanai.distributed_scheduled_task_demo.handler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import insight.shinanai.distributed_scheduled_task_demo.event.JobLogEvent;
-import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.vo.LogVO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -16,7 +14,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -25,13 +22,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class JobLogWebSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<WebSocketSession>> jobSessionMap = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
-    @Value("${job.log.history.count:10}")
-    private int executeLogHistoryCount;
-    private final JobLogService jobLogService;
-
-    public JobLogWebSocketHandler(JobLogService jobLogService) {
-        this.jobLogService = jobLogService;
-    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -40,15 +30,6 @@ public class JobLogWebSocketHandler extends TextWebSocketHandler {
             jobSessionMap.computeIfAbsent(jobId, ignore -> new CopyOnWriteArrayList<>())
                     .add(session);
             log.info("WebSocket connection established for job ID: {}, Session ID: {}", jobId, session.getId());
-            try {
-                List<LogVO> logVOS = jobLogService.getRecentLogsLimitHistoryCount(jobId, executeLogHistoryCount);
-                for (LogVO logVO : logVOS) {
-                    String message = objectMapper.writeValueAsString(logVO);
-                    session.sendMessage(new TextMessage(message));
-                }
-            } catch (Exception e) {
-                log.error("Error sending history log to WebSocket session: {}", session.getId(), e);
-            }
         }
     }
 

@@ -42,11 +42,6 @@ public class ScriptFiles implements Serializable {
     private String fileContent;
 
     /**
-     * 启动命令行参数，多个参数用空格分隔
-     */
-    private String commandArgs;
-
-    /**
      * 脚本类型 (SHELL, PYTHON)
      */
     private String fileType;

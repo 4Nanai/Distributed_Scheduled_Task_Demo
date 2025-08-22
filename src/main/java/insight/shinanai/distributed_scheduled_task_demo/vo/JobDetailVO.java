@@ -1,34 +1,16 @@
-package insight.shinanai.distributed_scheduled_task_demo.domain;
+package insight.shinanai.distributed_scheduled_task_demo.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.util.Date;
 
-/**
- * @TableName job_info
- */
-@TableName(value = "job_info")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class JobInfo implements Serializable {
-    /**
-     * 主键
-     */
-    @TableId(type = IdType.AUTO)
+@NoArgsConstructor
+public class JobDetailVO {
     private Long id;
-
-    /**
-     * 用户ID
-     */
-    private Long userId;
 
     /**
      * 作业名称
@@ -49,11 +31,6 @@ public class JobInfo implements Serializable {
      * 启动命令行参数，多个参数用空格分隔
      */
     private String commandArgs;
-
-    /**
-     * 脚本文件ID
-     */
-    private Long scriptFileId;
 
     /**
      * 作业状态 (STARTED, STOPPED, PAUSED)
@@ -84,7 +61,4 @@ public class JobInfo implements Serializable {
      * 下次执行时间
      */
     private Date nextExecuteTime;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }

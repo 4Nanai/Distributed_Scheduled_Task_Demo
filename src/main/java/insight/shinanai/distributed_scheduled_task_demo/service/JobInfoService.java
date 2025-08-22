@@ -2,6 +2,8 @@ package insight.shinanai.distributed_scheduled_task_demo.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
+import insight.shinanai.distributed_scheduled_task_demo.vo.JobDetailVO;
+import insight.shinanai.distributed_scheduled_task_demo.vo.JobListVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -14,7 +16,13 @@ import java.util.List;
  */
 public interface JobInfoService extends IService<JobInfo> {
 
-    void scheduleScriptJob(Long jobId, String jobName, String cron, int shardingCount, Long scriptId);
+    void scheduleScriptJob(Long jobId,
+                           Long userId,
+                           String jobName,
+                           String cron,
+                           int shardingCount,
+                           String commandLineArgs,
+                           Long scriptId);
 
     void registerScriptJob(String jobName,
                            String cronExpression,
@@ -24,4 +32,8 @@ public interface JobInfoService extends IService<JobInfo> {
                            String description) throws IOException;
 
     List<JobInfo> listAllRunningJobs();
+
+    List<JobListVO> getAllJobs();
+
+    JobDetailVO getJobById(Long jobId);
 }

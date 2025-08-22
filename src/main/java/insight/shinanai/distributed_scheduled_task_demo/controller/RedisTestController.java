@@ -1,5 +1,6 @@
 package insight.shinanai.distributed_scheduled_task_demo.controller;
 
+import insight.shinanai.distributed_scheduled_task_demo.utils.ResponseUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ public class RedisTestController {
     @GetMapping("/redis/test")
     public ResponseEntity<?> testRedisConnection() {
         redisTemplate.opsForValue().set("test", "Hello, Redis!");
-        return ResponseEntity.ok(redisTemplate.opsForValue().get("test"));
+        return ResponseUtils.success(redisTemplate.opsForValue()
+                                             .get("test"));
     }
 }

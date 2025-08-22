@@ -1,9 +1,10 @@
 package insight.shinanai.distributed_scheduled_task_demo.controller;
 
+import insight.shinanai.distributed_scheduled_task_demo.utils.ResponseUtils;
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -20,9 +21,9 @@ public class ClusterInfoController {
     ResponseEntity<?> getClusterInstance() {
         try {
             List<String> instances = registryCenter.getChildrenKeys("/insight.shinanai.distributed_scheduled_task_demo.job.ClockRemindJob/instances");
-            return ResponseEntity.ok(instances);
+            return ResponseUtils.success(instances);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error retrieving cluster instances: " + e.getMessage());
+            return ResponseUtils.error("Error retrieving cluster instances: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 }

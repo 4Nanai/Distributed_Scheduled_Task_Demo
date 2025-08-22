@@ -41,6 +41,8 @@ public class SecurityConfig {
                                 .anonymous()
                                 .requestMatchers("/api/auth/register")
                                 .anonymous()
+                                .requestMatchers("/jobs/*/logs")
+                                .permitAll() // websocket endpoint
                                 .anyRequest()
                                 .authenticated())
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)

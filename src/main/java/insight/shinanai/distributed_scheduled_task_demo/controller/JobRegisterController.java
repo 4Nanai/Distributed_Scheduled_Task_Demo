@@ -1,15 +1,19 @@
 package insight.shinanai.distributed_scheduled_task_demo.controller;
 
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
+import insight.shinanai.distributed_scheduled_task_demo.utils.ResponseUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
-@RestController("/api/jobs")
+@RestController
+@RequestMapping("/api/jobs")
 public class JobRegisterController {
 
     private final JobInfoService jobInfoService;
@@ -29,8 +33,7 @@ public class JobRegisterController {
     ) {
         // Logic to register a script job
         try {
-            if (scriptFile.isEmpty()) return ResponseEntity.badRequest()
-                    .body("Script file is empty");
+            if (scriptFile.isEmpty()) return ResponseUtils.error("Script file is empty", HttpStatus.BAD_REQUEST);
             jobInfoService.registerScriptJob(jobName,
                                              cronExpression,
                                              shardingCount,
@@ -40,10 +43,8 @@ public class JobRegisterController {
             );
         } catch (Exception e) {
             log.error("Error registering script job", e);
-            return ResponseEntity.status(500)
-                    .body("Error registering script job: " + e.getMessage());
+            return ResponseUtils.error("Error registering script job.");
         }
-        return ResponseEntity.ok()
-                .body("Script job registered successfully");
+        return ResponseUtils.success("Script job registered successfully");
     }
 }

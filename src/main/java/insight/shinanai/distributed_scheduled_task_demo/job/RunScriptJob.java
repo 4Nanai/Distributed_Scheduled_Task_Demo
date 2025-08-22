@@ -15,6 +15,8 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -24,18 +26,26 @@ public class RunScriptJob implements SimpleJob {
     private final Long jobId;
     private final String jobName;
     private final Long scriptFileId;
+    private int shardItem;
+    private final String commandArgs;
     private final ScriptFilesService scriptFilesService;
     private final JobLogService jobLogService;
-    private String executionId;
+    private final String executionId;
+
+    private final StringBuilder infoLogBuilder = new StringBuilder();
+    private final StringBuilder errorLogBuilder = new StringBuilder();
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public RunScriptJob(Long jobId,
                         String jobName,
                         Long scriptFileId,
+                        String commandArgs,
                         ScriptFilesService scriptFilesService,
                         JobLogService jobLogService) {
         this.jobId = jobId;
         this.jobName = jobName;
         this.scriptFileId = scriptFileId;
+        this.commandArgs = commandArgs;
         this.scriptFilesService = scriptFilesService;
         this.jobLogService = jobLogService;
         this.executionId = UUID.randomUUID()
@@ -44,11 +54,12 @@ public class RunScriptJob implements SimpleJob {
 
     @Override
     public void execute(ShardingContext shardingContext) {
+        this.shardItem = shardingContext.getShardingItem();
+        int totalShard = shardingContext.getShardingTotalCount();
+
         try {
             ScriptFiles scriptFiles = scriptFilesService.getById(scriptFileId);
-            // 当前分片
-            int shardItem = shardingContext.getShardingItem();
-            int totalShard = shardingContext.getShardingTotalCount();
+
             String startMessage = String.format("Starting job: %s, Shard: %d/%d, Script ID: %d, Script Name: %s",
                                                 jobName,
                                                 shardItem,
@@ -56,38 +67,40 @@ public class RunScriptJob implements SimpleJob {
                                                 scriptFileId,
                                                 scriptFiles.getFileName()
             );
+
             log.info(startMessage);
-            jobLogService.sendAndSaveLog(jobId, jobName, "INFO", startMessage, shardItem, executionId);
+            sendLogAndCollect("INFO", startMessage);
+
             runShellScript(scriptFiles, shardItem, totalShard);
 
             String successMessage = String.format("Job: %s, Shard: %d/%d, Script ID: %d executed successfully",
-                                                  jobName,
-                                                  shardItem,
-                                                  totalShard - 1,
-                                                  scriptFileId
+                                                  jobName, shardItem, totalShard - 1, scriptFileId
             );
-            jobLogService.sendAndSaveLog(jobId, jobName, "INFO", successMessage, shardItem, executionId);
+
+            sendLogAndCollect("INFO", successMessage);
             log.info(successMessage);
+
         } catch (Exception e) {
             String exceptionMessage = String.format("Job: %s, Shard: %d/%d, Script ID: %d execution failed: %s",
-                                                    jobName,
-                                                    shardingContext.getShardingItem(),
-                                                    shardingContext.getShardingTotalCount() - 1,
-                                                    scriptFileId,
-                                                    e.getMessage()
+                                                    jobName, shardItem, totalShard - 1, scriptFileId, e.getMessage()
             );
-            jobLogService.sendAndSaveLog(jobId,
-                                         jobName,
-                                         "ERROR",
-                                         exceptionMessage,
-                                         shardingContext.getShardingItem(),
-                                         executionId
-            );
+
+            sendLogAndCollect("ERROR", exceptionMessage);
             log.error(exceptionMessage, e);
             throw new RuntimeException(e);
+        } finally {
+            saveCompleteLogs();
         }
     }
 
+    /**
+     * Run the shell script with the provided script files
+     *
+     * @param scriptFiles ScriptFiles object containing script details
+     * @param shardItem   the shard item number
+     * @param totalShard  the total number of shards
+     * @throws Exception if an error occurs during script execution
+     */
     private void runShellScript(ScriptFiles scriptFiles, int shardItem, int totalShard) throws Exception {
         Path tempScriptPath = createTempScriptFile(scriptFiles);
         try {
@@ -96,12 +109,10 @@ public class RunScriptJob implements SimpleJob {
             List<String> command = new ArrayList<>();
             command.add("bash");
             command.add(tempScriptPath.toString());
-            if (StringUtils.hasText(scriptFiles.getCommandArgs())) {
-                command.addAll(List.of(scriptFiles.getCommandArgs()
-                                               .split(" ")));
+            if (StringUtils.hasText(this.commandArgs)) {
+                command.addAll(List.of(this.commandArgs.split(" ")));
             }
             processBuilder.command(command);
-
             processBuilder.environment()
                     .put("SHARD_ITEM", String.valueOf(shardItem));
 
@@ -117,32 +128,37 @@ public class RunScriptJob implements SimpleJob {
         }
     }
 
-    private String readOutput(Process process, int shardItem, int totalShard) {
-        StringBuilder sb = new StringBuilder();
+    /**
+     * Read the output and error streams of the script process
+     *
+     * @param process    Process instance of the executed script
+     * @param shardItem  the shard item number
+     * @param totalShard the total number of shards
+     */
+    private void readOutput(Process process, int shardItem, int totalShard) {
+        // Collect standard output
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                sb.append(line)
-                        .append(System.lineSeparator());
                 String message = String.format("[%d/%d] %s", shardItem, totalShard - 1, line);
-                jobLogService.sendAndSaveLog(jobId, jobName, "INFO", message, shardItem, executionId);
+                sendLogAndCollect("INFO", message);
                 log.info(line);
             }
         } catch (IOException e) {
             log.error("Error reading script output", e);
         }
+
+        // Collect error output
         try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
             String line;
             while ((line = errorReader.readLine()) != null) {
-                sb.append(line)
-                        .append(System.lineSeparator());
                 String message = String.format("[%d/%d] %s", shardItem, totalShard - 1, line);
-                jobLogService.sendAndSaveLog(jobId, jobName, "ERROR", message, shardItem, executionId);
+                sendLogAndCollect("ERROR", message);
+                log.error(line);
             }
         } catch (IOException e) {
             log.error("Error reading script error output", e);
         }
-        return sb.toString();
     }
 
     private Path createTempScriptFile(ScriptFiles scriptFiles) throws IOException {
@@ -150,5 +166,42 @@ public class RunScriptJob implements SimpleJob {
         Path path = Files.createTempFile(scriptFiles.getFileName(), scriptFiles.getFileType());
         Files.writeString(path, fileContent, Charsets.UTF_8);
         return path;
+    }
+
+    /**
+     * Send log messages and collect them for later saving
+     *
+     * @param logLevel the log level (INFO or ERROR)
+     * @param message  the log message to send and collect
+     */
+    private void sendLogAndCollect(String logLevel, String message) {
+        // Send log through webSocket
+        jobLogService.sendLog(jobId, logLevel, message);
+
+        // Collect logs with timestamp
+        String timestamp = LocalDateTime.now()
+                .format(formatter);
+        String formattedMessage = timestamp + " - " + message + System.lineSeparator();
+
+        if ("INFO".equals(logLevel)) {
+            infoLogBuilder.append(formattedMessage);
+        } else if ("ERROR".equals(logLevel)) {
+            errorLogBuilder.append(formattedMessage);
+        }
+    }
+
+    /**
+     * Save the complete logs to the database
+     */
+    private void saveCompleteLogs() {
+        if (!infoLogBuilder.isEmpty()) {
+            String infoLogContent = infoLogBuilder.toString();
+            jobLogService.saveCompleteLog(jobId, jobName, shardItem, "INFO", infoLogContent, executionId);
+        }
+
+        if (!errorLogBuilder.isEmpty()) {
+            String errorLogContent = errorLogBuilder.toString();
+            jobLogService.saveCompleteLog(jobId, jobName, shardItem, "ERROR", errorLogContent, executionId);
+        }
     }
 }

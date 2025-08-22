@@ -3,9 +3,15 @@ package insight.shinanai.distributed_scheduled_task_demo.utils;
 import insight.shinanai.distributed_scheduled_task_demo.domain.User;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 public final class SecurityUtils {
+    public static Authentication getAuthentication() {
+        return SecurityContextHolder.getContext()
+                .getAuthentication();
+    }
+
     public static User getCurrentUser() {
         UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext()
                 .getAuthentication();

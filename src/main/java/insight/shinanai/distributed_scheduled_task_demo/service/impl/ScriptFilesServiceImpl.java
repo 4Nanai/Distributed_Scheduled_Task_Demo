@@ -20,7 +20,7 @@ public class ScriptFilesServiceImpl extends ServiceImpl<ScriptFilesMapper, Scrip
         implements ScriptFilesService {
 
     @Override
-    public ScriptFiles saveScriptFile(MultipartFile scriptFile, String commandArgs, String jobName) throws IOException {
+    public ScriptFiles saveScriptFile(MultipartFile scriptFile, String jobName) throws IOException {
         String fileContent = new String(scriptFile.getBytes(), StandardCharsets.UTF_8);
         String fileName = scriptFile.getOriginalFilename();
         String fileType = fileName != null ? fileName.substring(fileName.lastIndexOf('.') + 1) : "";
@@ -31,7 +31,6 @@ public class ScriptFilesServiceImpl extends ServiceImpl<ScriptFilesMapper, Scrip
                                                   jobName,
                                                   fileName,
                                                   fileContent,
-                                                  commandArgs,
                                                   fileType,
                                                   scriptFile.getSize(),
                                                   null,

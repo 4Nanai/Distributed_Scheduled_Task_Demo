@@ -39,7 +39,13 @@ class RunScriptJobTest {
 
     @BeforeEach
     void setUp() {
-        runScriptJob = new RunScriptJob(JOB_ID, JOB_NAME, SCRIPT_FILE_ID, scriptFilesService, jobLogService);
+        runScriptJob = new RunScriptJob(JOB_ID,
+                                        JOB_NAME,
+                                        SCRIPT_FILE_ID,
+                                        "arg1 arg2",
+                                        scriptFilesService,
+                                        jobLogService
+        );
     }
 
     @Test
@@ -62,9 +68,7 @@ class RunScriptJobTest {
 
     @Test
     void testExecuteWithCommandArgs() {
-        // 准备带参数的脚本
         ScriptFiles scriptFiles = createTestScriptFiles("#!/bin/bash\necho $1 $2");
-        scriptFiles.setCommandArgs("arg1 arg2");
 
         when(scriptFilesService.getById(SCRIPT_FILE_ID)).thenReturn(scriptFiles);
         when(shardingContext.getShardingItem()).thenReturn(1);

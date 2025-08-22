@@ -6,9 +6,11 @@
 
     <resultMap id="BaseResultMap" type="insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo">
             <id property="id" column="id" />
+        <result property="userId" column="user_id"/>
             <result property="jobName" column="job_name" />
             <result property="cronExpression" column="cron_expression" />
             <result property="shardingCount" column="sharding_count" />
+        <result property="commandArgs" column="command_args"/>
             <result property="scriptFileId" column="script_file_id" />
             <result property="jobStatus" column="job_status" />
             <result property="description" column="description" />
@@ -19,7 +21,8 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,job_name,cron_expression,sharding_count,script_file_id,job_status,
+        id
+        ,user_id,job_name,cron_expression,sharding_count, command_args, script_file_id,job_status,
         description,create_time,update_time,last_execute_time,next_execute_time
     </sql>
     <select id="listAllRunningJobs"

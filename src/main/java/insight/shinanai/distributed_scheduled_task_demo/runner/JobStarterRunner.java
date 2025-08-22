@@ -38,9 +38,11 @@ public class JobStarterRunner implements ApplicationRunner {
                     .map(job -> CompletableFuture.runAsync(() -> {
                         try {
                             jobInfoService.scheduleScriptJob(job.getId(),
+                                                             job.getUserId(),
                                                              job.getJobName(),
                                                              job.getCronExpression(),
                                                              job.getShardingCount(),
+                                                             job.getCommandArgs(),
                                                              job.getScriptFileId()
                             );
                         } catch (Exception e) {

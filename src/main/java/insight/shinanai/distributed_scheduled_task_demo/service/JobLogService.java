@@ -13,12 +13,14 @@ import java.util.List;
  */
 public interface JobLogService extends IService<JobLog> {
 
-    void sendAndSaveLog(Long jobId,
-                        String jobName,
-                        String logLevel,
-                        String startMessage,
-                        int shardItem,
-                        String executionId);
+    List<LogVO> getRecentLogsLimitHistoryCount(String jobId);
 
-    List<LogVO> getRecentLogsLimitHistoryCount(String jobId, int executeLogHistoryCount);
+    void sendLog(Long jobId, String logLevel, String message);
+
+    void saveCompleteLog(Long jobId,
+                         String jobName,
+                         int shardItem,
+                         String logLevel,
+                         String message,
+                         String executionId);
 }
