@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
-import insight.shinanai.distributed_scheduled_task_demo.job.RunScriptJob;
+import insight.shinanai.distributed_scheduled_task_demo.job.RunShellScriptJob;
 import insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
@@ -17,11 +17,14 @@ import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
 import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.ScheduleJobBootstrap;
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
 import org.springframework.beans.BeanUtils;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -100,12 +103,14 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                   String commandArgs,
                                   Long scriptId) {
         String uniqueJobName = jobName + "_user_" + userId;
-        RunScriptJob runScriptJob = new RunScriptJob(jobId,
-                                                     uniqueJobName,
-                                                     scriptId,
-                                                     commandArgs,
-                                                     scriptFilesService,
-                                                     jobLogService
+        RunShellScriptJob runScriptJob = new RunShellScriptJob(jobId,
+                                                               uniqueJobName,
+                                                               cron,
+                                                               scriptId,
+                                                               commandArgs,
+                                                               this,
+                                                               scriptFilesService,
+                                                               jobLogService
         );
         JobConfiguration jobConfiguration = generateJobConfiguration(uniqueJobName, cron, shardingCount);
         ScheduleJobBootstrap scheduleJobBootstrap = new ScheduleJobBootstrap(registryCenter,
@@ -153,6 +158,19 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
         JobDetailVO jobDetailVO = new JobDetailVO();
         BeanUtils.copyProperties(jobInfo, jobDetailVO);
         return jobDetailVO;
+    }
+
+    @Transactional
+    @Override
+    public void updateJobExecutionTime(Long jobId, String cron) {
+        CronExpression cronExpression = CronExpression.parse(cron);
+
+        // get current time in UTC
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        LocalDateTime nextUtc = cronExpression.next(nowUtc);
+
+        this.getBaseMapper()
+                .updateJobExecutionTime(jobId, nowUtc, nextUtc);
     }
 
     private JobConfiguration generateJobConfiguration(String uniqueJobName, String cron, int shardingCount) {

@@ -2,7 +2,9 @@ package insight.shinanai.distributed_scheduled_task_demo.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
+import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -14,6 +16,10 @@ import java.util.List;
 public interface JobInfoMapper extends BaseMapper<JobInfo> {
 
     List<JobInfo> listAllRunningJobs();
+
+    void updateJobExecutionTime(@Param("id") Long jobId,
+                                @Param("last_execute_time") LocalDateTime lastExecuteTime,
+                                @Param("next_execute_time") LocalDateTime nextExecuteTime);
 }
 
 

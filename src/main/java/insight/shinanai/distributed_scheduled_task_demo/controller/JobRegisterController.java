@@ -5,6 +5,7 @@ import insight.shinanai.distributed_scheduled_task_demo.utils.ResponseUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -34,6 +35,8 @@ public class JobRegisterController {
         // Logic to register a script job
         try {
             if (scriptFile.isEmpty()) return ResponseUtils.error("Script file is empty", HttpStatus.BAD_REQUEST);
+            if (!CronExpression.isValidExpression(cronExpression))
+                return ResponseUtils.error("Invalid cron expression", HttpStatus.BAD_REQUEST);
             jobInfoService.registerScriptJob(jobName,
                                              cronExpression,
                                              shardingCount,

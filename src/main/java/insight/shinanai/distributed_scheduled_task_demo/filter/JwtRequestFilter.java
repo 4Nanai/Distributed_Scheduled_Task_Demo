@@ -44,6 +44,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String username = null;
         String jwt = null;
 
+        // get token header
         if (requestHeader != null) {
             jwt = requestHeader;
             try {
@@ -57,13 +58,16 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             log.warn("JWT Token does not exist");
         }
 
+        // get user details and set authentication
         if (username != null && SecurityContextHolder.getContext()
                 .getAuthentication() == null) {
             UserDetails userDetails = getUserDetailFromRedis(username);
+            // user details not in redis
             if (userDetails == null) {
                 userDetails = userDetailsService.loadUserByUsername(username);
                 cacheUserDetailsToRedis(userDetails);
             }
+            // validate token
             if (JwtUtils.validateToken(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
