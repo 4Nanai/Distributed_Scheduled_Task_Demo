@@ -1,6 +1,7 @@
 services:
   mysql:
     image: 'mysql:latest'
+    container_name: 'mysql'
     environment:
       - 'MYSQL_DATABASE=distributed_task_db'
       - 'MYSQL_PASSWORD=password'
@@ -8,14 +9,19 @@ services:
       - 'MYSQL_USER=admin'
     ports:
       - '3306:3306'
+    networks:
+      - app-network
 
   redis:
     image: 'redis:latest'
+    container_name: 'redis'
     ports:
       - '6379:6379'
     volumes:
       - './data/redis-data:/data'
 #    command: redis-server --appendonly yes
+    networks:
+      - app-network
 
   zoo1:
     image: 'zookeeper:3.9'
@@ -30,7 +36,7 @@ services:
       - './data/zoo1/data:/data'
       - './data/zoo1/logs:/datalog'
     networks:
-      - zoo-net
+      - app-network
 
   zoo2:
     image: 'zookeeper:3.9'
@@ -45,7 +51,7 @@ services:
       - './data/zoo2/data:/data'
       - './data/zoo2/logs:/datalog'
     networks:
-      - zoo-net
+      - app-network
 
   zoo3:
     image: 'zookeeper:3.9'
@@ -60,8 +66,8 @@ services:
       - './data/zoo3/data:/data'
       - './data/zoo3/logs:/datalog'
     networks:
-      - zoo-net
+      - app-network
 
 networks:
-  zoo-net:
+  app-network:
     driver: 'bridge'
