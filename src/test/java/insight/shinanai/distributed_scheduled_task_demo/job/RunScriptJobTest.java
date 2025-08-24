@@ -275,7 +275,7 @@ class RunScriptJobTest {
         assertDoesNotThrow(() -> runScriptJob.execute(shardingContext));
 
         // verify logs sent
-        verify(jobLogService, atLeastOnce()).sendLog(eq(JOB_ID), eq(LogLevelConstant.INFO), contains("Starting job"));
+        verify(jobLogService, atLeastOnce()).sendLog(eq(JOB_ID), eq(LogLevelConstant.INFO), contains("Job Name"));
         verify(jobLogService, atLeastOnce()).sendLog(eq(JOB_ID),
                                                      eq(LogLevelConstant.INFO),
                                                      contains("executed successfully")
