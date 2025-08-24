@@ -9,7 +9,6 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-
 public class LogVO {
     private String logLevel;
     private String message;

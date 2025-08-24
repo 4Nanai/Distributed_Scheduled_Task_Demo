@@ -21,7 +21,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(jobLogWebSocketHandler, "/jobs/{jobId}/logs")
+        registry.addHandler(jobLogWebSocketHandler, "/ws/jobs/{jobId}/logs")
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(webSocketJwtValidationInterceptor);
     }

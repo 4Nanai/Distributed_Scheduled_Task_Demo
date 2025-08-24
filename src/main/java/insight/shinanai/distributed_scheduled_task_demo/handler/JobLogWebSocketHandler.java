@@ -2,10 +2,12 @@ package insight.shinanai.distributed_scheduled_task_demo.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import insight.shinanai.distributed_scheduled_task_demo.dto.JobLogDTO;
 import insight.shinanai.distributed_scheduled_task_demo.event.JobLogEvent;
 import insight.shinanai.distributed_scheduled_task_demo.vo.LogVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -22,6 +24,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class JobLogWebSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<WebSocketSession>> jobSessionMap = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public JobLogWebSocketHandler(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -50,7 +57,16 @@ public class JobLogWebSocketHandler extends TextWebSocketHandler {
 
     @EventListener
     public void handleJobLogEvent(JobLogEvent event) {
-        sendLogToSessions(event.getJobId(), event.getLogVO());
+        try {
+            // Publish the log to Redis
+            JobLogDTO jobLog = new JobLogDTO(event.getJobId(), event.getLogVO());
+            String message = objectMapper.writeValueAsString(jobLog);
+            String channel = "job-logs:" + event.getJobId();
+            stringRedisTemplate.convertAndSend(channel, message);
+            log.debug("Published job log event to Redis channel: {}", channel);
+        } catch (Exception e) {
+            log.error("Error publishing job log event to Redis", e);
+        }
     }
 
     public void sendLogToSessions(String jobId, LogVO logVO) {
@@ -84,7 +100,7 @@ public class JobLogWebSocketHandler extends TextWebSocketHandler {
             return null;
         }
         String path = uri.getPath();
-        if (path != null && path.contains("/jobs/") && path.endsWith("/logs")) {
+        if (path != null && path.contains("/ws/jobs/") && path.endsWith("/logs")) {
             String[] split = path.split("/");
             for (int i = 0; i < split.length; i++) {
                 if ("jobs".equals(split[i]) && i + 1 < split.length) {

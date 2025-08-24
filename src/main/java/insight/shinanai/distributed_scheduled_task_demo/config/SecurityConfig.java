@@ -41,7 +41,7 @@ public class SecurityConfig {
                                 .anonymous()
                                 .requestMatchers("/api/auth/register")
                                 .anonymous()
-                                .requestMatchers("/jobs/*/logs")
+                                .requestMatchers("/ws/jobs/*/logs")
                                 .permitAll() // websocket endpoint
                                 .anyRequest()
                                 .authenticated())
