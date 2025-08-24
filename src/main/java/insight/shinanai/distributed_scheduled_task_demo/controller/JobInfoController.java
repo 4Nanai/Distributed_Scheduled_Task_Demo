@@ -5,10 +5,8 @@ import insight.shinanai.distributed_scheduled_task_demo.utils.ResponseUtils;
 import insight.shinanai.distributed_scheduled_task_demo.vo.JobDetailVO;
 import insight.shinanai.distributed_scheduled_task_demo.vo.JobListVO;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.scheduling.support.CronExpression;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -31,5 +29,18 @@ public class JobInfoController {
     public ResponseEntity<?> getJobById(@PathVariable("jobId") Long jobId) {
         JobDetailVO jobDetailVO = jobInfoService.getJobById(jobId);
         return ResponseUtils.success(jobDetailVO);
+    }
+
+    // TODO: update fields undecided
+    // Unimplemented
+    @PutMapping("/{jobId}")
+    public ResponseEntity<?> updateJobInfo(@PathVariable("jobId") Long jobId,
+                                           @RequestParam("jobName") String jobName,
+                                           @RequestParam("cron") String cron,
+                                           @RequestParam(value = "shardingCount", defaultValue = "1") int shardingCount,
+                                           @RequestParam(value = "commandArgs", required = false) String commandArgs,
+                                           @RequestParam(value = "description", required = false) String description) {
+        if (!CronExpression.isValidExpression(cron)) return ResponseUtils.error("Invalid cron expression");
+        return null;
     }
 }

@@ -3,7 +3,6 @@ package insight.shinanai.distributed_scheduled_task_demo.job;
 import com.google.common.base.Charsets;
 import insight.shinanai.distributed_scheduled_task_demo.constant.LogLevelConstant;
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
-import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +34,6 @@ public class RunShellScriptJob implements SimpleJob {
     private final Long scriptFileId;
     private int shardItem;
     private final String commandArgs;
-    private final JobInfoService jobInfoService;
     private final ScriptFilesService scriptFilesService;
     private final JobLogService jobLogService;
     private final String executionId;
@@ -50,7 +48,6 @@ public class RunShellScriptJob implements SimpleJob {
                              String cron,
                              Long scriptFileId,
                              String commandArgs,
-                             JobInfoService jobInfoService,
                              ScriptFilesService scriptFilesService,
                              JobLogService jobLogService) {
         this.jobId = jobId;
@@ -58,7 +55,6 @@ public class RunShellScriptJob implements SimpleJob {
         this.cron = cron;
         this.scriptFileId = scriptFileId;
         this.commandArgs = commandArgs;
-        this.jobInfoService = jobInfoService;
         this.scriptFilesService = scriptFilesService;
         this.jobLogService = jobLogService;
         this.executionId = UUID.randomUUID()
@@ -73,19 +69,16 @@ public class RunShellScriptJob implements SimpleJob {
      */
     @Override
     public void execute(ShardingContext shardingContext) {
-        // Update job execution time
-        jobInfoService.updateJobExecutionTime(jobId, cron);
         this.shardItem = shardingContext.getShardingItem();
         int totalShard = shardingContext.getShardingTotalCount();
 
         try {
             ScriptFiles scriptFiles = scriptFilesService.getById(scriptFileId);
 
-            String startMessage = String.format("Starting job: %s, Shard: %d/%d, Script ID: %d, Script Name: %s",
+            String startMessage = String.format("Job Name: %s, Shard: %d/%d, Script Name: %s",
                                                 jobName,
                                                 shardItem,
                                                 totalShard - 1,
-                                                scriptFileId,
                                                 scriptFiles.getFileName()
             );
 
@@ -95,8 +88,8 @@ public class RunShellScriptJob implements SimpleJob {
             // exec shell script
             runShellScript(scriptFiles, shardItem, totalShard);
 
-            String successMessage = String.format("Job: %s, Shard: %d/%d, Script ID: %d executed successfully",
-                                                  jobName, shardItem, totalShard - 1, scriptFileId
+            String successMessage = String.format("Job: %s, Shard: %d/%d executed successfully",
+                                                  jobName, shardItem, totalShard - 1
             );
 
             sendLogAndCollect(LogLevelConstant.INFO, successMessage);
@@ -228,7 +221,13 @@ public class RunShellScriptJob implements SimpleJob {
     private void saveCompleteLogs() {
         if (!infoLogBuilder.isEmpty()) {
             String infoLogContent = infoLogBuilder.toString();
-            jobLogService.saveCompleteLog(jobId, jobName, shardItem, LogLevelConstant.INFO, infoLogContent, executionId);
+            jobLogService.saveCompleteLog(jobId,
+                                          jobName,
+                                          shardItem,
+                                          LogLevelConstant.INFO,
+                                          infoLogContent,
+                                          executionId
+            );
         }
 
         if (!errorLogBuilder.isEmpty()) {
@@ -238,7 +237,8 @@ public class RunShellScriptJob implements SimpleJob {
                                           shardItem,
                                           LogLevelConstant.ERROR,
                                           errorLogContent,
-                                          executionId);
+                                          executionId
+            );
         }
     }
 }

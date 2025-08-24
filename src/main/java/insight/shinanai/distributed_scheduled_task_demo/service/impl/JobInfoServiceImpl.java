@@ -9,6 +9,7 @@ import insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
+import insight.shinanai.distributed_scheduled_task_demo.utils.JobConfigUtils;
 import insight.shinanai.distributed_scheduled_task_demo.utils.SecurityUtils;
 import insight.shinanai.distributed_scheduled_task_demo.vo.JobDetailVO;
 import insight.shinanai.distributed_scheduled_task_demo.vo.JobListVO;
@@ -17,14 +18,11 @@ import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
 import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.ScheduleJobBootstrap;
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
 import org.springframework.beans.BeanUtils;
-import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,12 +52,13 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     private void createScriptJob(String jobName, String cron, int shardingCount, String commandArgs, Long scriptId,
                                  String description) {
         try {
-            if (jobBootstrapMap.containsKey(jobName + "_user_" + SecurityUtils.getCurrentUserId())) {
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            if (jobBootstrapMap.containsKey(JobConfigUtils.getUniqueJobName(jobName, currentUserId))) {
                 throw new RuntimeException("Job with name " + jobName + " already exists.");
             }
 
             JobInfo jobInfo = new JobInfo(null,
-                                          SecurityUtils.getCurrentUserId(),
+                                          currentUserId,
                                           jobName,
                                           cron,
                                           shardingCount,
@@ -74,7 +73,7 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
             );
             this.save(jobInfo);
             scheduleScriptJob(jobInfo.getId(),
-                              SecurityUtils.getCurrentUserId(),
+                              currentUserId,
                               jobName,
                               cron,
                               shardingCount,
@@ -102,17 +101,16 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                   int shardingCount,
                                   String commandArgs,
                                   Long scriptId) {
-        String uniqueJobName = jobName + "_user_" + userId;
+        String uniqueJobName = JobConfigUtils.getUniqueJobName(jobName, userId);
         RunShellScriptJob runScriptJob = new RunShellScriptJob(jobId,
                                                                uniqueJobName,
                                                                cron,
                                                                scriptId,
                                                                commandArgs,
-                                                               this,
                                                                scriptFilesService,
                                                                jobLogService
         );
-        JobConfiguration jobConfiguration = generateJobConfiguration(uniqueJobName, cron, shardingCount);
+        JobConfiguration jobConfiguration = JobConfigUtils.generateJobConfiguration(uniqueJobName, cron, shardingCount);
         ScheduleJobBootstrap scheduleJobBootstrap = new ScheduleJobBootstrap(registryCenter,
                                                                              runScriptJob,
                                                                              jobConfiguration
@@ -158,43 +156,6 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
         JobDetailVO jobDetailVO = new JobDetailVO();
         BeanUtils.copyProperties(jobInfo, jobDetailVO);
         return jobDetailVO;
-    }
-
-    @Transactional
-    @Override
-    public void updateJobExecutionTime(Long jobId, String cron) {
-        CronExpression cronExpression = CronExpression.parse(cron);
-
-        // get current time in UTC
-        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
-        LocalDateTime nextUtc = cronExpression.next(nowUtc);
-
-        this.getBaseMapper()
-                .updateJobExecutionTime(jobId, nowUtc, nextUtc);
-    }
-
-    private JobConfiguration generateJobConfiguration(String uniqueJobName, String cron, int shardingCount) {
-        return JobConfiguration.newBuilder(uniqueJobName, shardingCount)
-                .cron(cron)
-                .shardingItemParameters(generateShardingParameters(shardingCount))
-                .overwrite(true)
-                .failover(true)
-                .misfire(true)
-                .disabled(false)
-                .build();
-    }
-
-    private String generateShardingParameters(int shardingCount) {
-        StringBuilder params = new StringBuilder();
-        for (int i = 0; i < shardingCount; i++) {
-            if (i > 0) {
-                params.append(",");
-            }
-            params.append(i)
-                    .append("=")
-                    .append(i);
-        }
-        return params.toString();
     }
 }
 
