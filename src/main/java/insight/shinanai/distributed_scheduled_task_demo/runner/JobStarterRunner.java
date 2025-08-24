@@ -1,8 +1,10 @@
 package insight.shinanai.distributed_scheduled_task_demo.runner;
 
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
+import insight.shinanai.distributed_scheduled_task_demo.dto.JobRegistryDTO;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
@@ -37,14 +39,9 @@ public class JobStarterRunner implements ApplicationRunner {
             CompletableFuture<?>[] futures = jobInfos.stream()
                     .map(job -> CompletableFuture.runAsync(() -> {
                         try {
-                            jobInfoService.scheduleScriptJob(job.getId(),
-                                                             job.getUserId(),
-                                                             job.getJobName(),
-                                                             job.getCronExpression(),
-                                                             job.getShardingCount(),
-                                                             job.getCommandArgs(),
-                                                             job.getScriptFileId()
-                            );
+                            JobRegistryDTO jobRegistryDTO = new JobRegistryDTO();
+                            BeanUtils.copyProperties(job, jobRegistryDTO);
+                            jobInfoService.scheduleScriptJob(jobRegistryDTO);
                         } catch (Exception e) {
                             log.error("Failed to schedule job: {}, Error: {}", job.getJobName(), e.getMessage(), e);
                         }

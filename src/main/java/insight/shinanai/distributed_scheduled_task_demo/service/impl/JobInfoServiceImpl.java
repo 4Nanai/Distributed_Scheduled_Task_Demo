@@ -2,8 +2,11 @@ package insight.shinanai.distributed_scheduled_task_demo.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import insight.shinanai.distributed_scheduled_task_demo.domain.JobInfo;
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
+import insight.shinanai.distributed_scheduled_task_demo.dto.JobRegistryDTO;
 import insight.shinanai.distributed_scheduled_task_demo.job.RunShellScriptJob;
 import insight.shinanai.distributed_scheduled_task_demo.mapper.JobInfoMapper;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
@@ -18,6 +21,7 @@ import org.apache.shardingsphere.elasticjob.api.JobConfiguration;
 import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.ScheduleJobBootstrap;
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,12 +45,17 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     private final ScriptFilesService scriptFilesService;
     private final CoordinatorRegistryCenter registryCenter;
     private final JobLogService jobLogService;
+    private final ObjectMapper objectMapper;
+    private final StringRedisTemplate stringRedisTemplate;
 
     public JobInfoServiceImpl(ScriptFilesService scriptFilesService, CoordinatorRegistryCenter registryCenter,
-                              JobLogService jobLogService) {
+                              JobLogService jobLogService, ObjectMapper objectMapper,
+                              StringRedisTemplate stringRedisTemplate) {
         this.scriptFilesService = scriptFilesService;
         this.registryCenter = registryCenter;
         this.jobLogService = jobLogService;
+        this.objectMapper = objectMapper;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     private void createScriptJob(String jobName, String cron, int shardingCount, String commandArgs, Long scriptId,
@@ -72,21 +81,16 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                           null
             );
             this.save(jobInfo);
-            scheduleScriptJob(jobInfo.getId(),
-                              currentUserId,
-                              jobName,
-                              cron,
-                              shardingCount,
-                              commandArgs,
-                              scriptId
-            );
-            log.info("Scheduled job: {}, Cron: {}, Shards: {}, Script ID: {}, Description: {}",
+            JobRegistryDTO jobRegistryDTO = new JobRegistryDTO();
+            BeanUtils.copyProperties(jobInfo, jobRegistryDTO);
+            scheduleScriptJob(jobRegistryDTO);
+            log.info("Scheduled job: {}, Cron: {}, Shards: {}, Script ID: {}. Notifying other instances...",
                      jobName,
                      cron,
                      shardingCount,
-                     scriptId,
-                     description
+                     scriptId
             );
+            notifyOtherInstances(jobRegistryDTO);
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
@@ -94,13 +98,14 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     }
 
     @Override
-    public void scheduleScriptJob(Long jobId,
-                                  Long userId,
-                                  String jobName,
-                                  String cron,
-                                  int shardingCount,
-                                  String commandArgs,
-                                  Long scriptId) {
+    public void scheduleScriptJob(JobRegistryDTO jobRegistryDTO) {
+        Long jobId = jobRegistryDTO.getId();
+        String jobName = jobRegistryDTO.getJobName();
+        Long userId = jobRegistryDTO.getUserId();
+        String cron = jobRegistryDTO.getCronExpression();
+        int shardingCount = jobRegistryDTO.getShardingCount();
+        String commandArgs = jobRegistryDTO.getCommandArgs();
+        Long scriptId = jobRegistryDTO.getScriptFileId();
         String uniqueJobName = JobConfigUtils.getUniqueJobName(jobName, userId);
         RunShellScriptJob runScriptJob = new RunShellScriptJob(jobId,
                                                                uniqueJobName,
@@ -153,9 +158,25 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
     @Override
     public JobDetailVO getJobById(Long jobId) {
         JobInfo jobInfo = this.getById(jobId);
+        if (jobInfo == null || !jobInfo.getUserId()
+                .equals(SecurityUtils.getCurrentUserId())) {
+            throw new RuntimeException("Job not found or access denied");
+        }
         JobDetailVO jobDetailVO = new JobDetailVO();
         BeanUtils.copyProperties(jobInfo, jobDetailVO);
         return jobDetailVO;
+    }
+
+    private void notifyOtherInstances(JobRegistryDTO jobRegistryDTO) {
+        try {
+            String channel = "job-registry:" + jobRegistryDTO.getId();
+            String message = objectMapper.writeValueAsString(jobRegistryDTO);
+            stringRedisTemplate.convertAndSend(channel, message);
+            log.info("Notified other instances via Redis channel: {}, Message: {}", channel, message);
+        } catch (JsonProcessingException e) {
+            log.error("Error notifying other instances via Redis", e);
+            throw new RuntimeException(e);
+        }
     }
 }
 

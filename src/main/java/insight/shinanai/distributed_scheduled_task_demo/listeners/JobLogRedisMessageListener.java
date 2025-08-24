@@ -11,11 +11,12 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class JobLogRedisMessageListener implements MessageListener {
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final JobLogWebSocketHandler webSocketHandler;
+    private final ObjectMapper objectMapper;
 
-    public JobLogRedisMessageListener(JobLogWebSocketHandler webSocketHandler) {
+    public JobLogRedisMessageListener(JobLogWebSocketHandler webSocketHandler, ObjectMapper objectMapper) {
         this.webSocketHandler = webSocketHandler;
+        this.objectMapper = objectMapper;
     }
 
     @Override
