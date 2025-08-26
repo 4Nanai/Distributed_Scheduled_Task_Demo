@@ -39,3 +39,5 @@ build/
 /data/zoo2/data/version-2
 /data/zoo3/logs
 /data/zoo3/data/version-2
+
+/data/redis-data/appendonlydir
