@@ -31,4 +31,6 @@ public interface JobInfoService extends IService<JobInfo> {
     List<JobListVO> getAllJobs();
 
     JobDetailVO getJobById(Long jobId);
+
+    void updateJobExecutionTime(Long jobId, String cron);
 }

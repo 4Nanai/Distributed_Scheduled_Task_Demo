@@ -2,6 +2,7 @@ package insight.shinanai.distributed_scheduled_task_demo.job;
 
 import insight.shinanai.distributed_scheduled_task_demo.constant.LogLevelConstant;
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
+import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import org.apache.shardingsphere.elasticjob.api.ShardingContext;
@@ -30,6 +31,9 @@ class RunScriptJobTest {
     private ScriptFilesService scriptFilesService;
 
     @Mock
+    private JobInfoService jobInfoService;
+
+    @Mock
     private JobLogService jobLogService;
 
     @Mock
@@ -51,6 +55,7 @@ class RunScriptJobTest {
                 CRON,
                 SCRIPT_FILE_ID,
                 COMMAND_ARGS,
+                jobInfoService,
                 scriptFilesService,
                 jobLogService
         );
@@ -67,6 +72,7 @@ class RunScriptJobTest {
 
         assertDoesNotThrow(() -> runScriptJob.execute(shardingContext));
 
+        verify(jobInfoService).updateJobExecutionTime(JOB_ID, CRON);
         verify(scriptFilesService).getById(SCRIPT_FILE_ID);
         verify(shardingContext).getShardingItem();
         verify(shardingContext).getShardingTotalCount();
@@ -151,7 +157,29 @@ class RunScriptJobTest {
         );
 
         // verify error log
+        verify(jobInfoService).updateJobExecutionTime(JOB_ID, CRON);
         verify(jobLogService, atLeastOnce()).sendLog(eq(JOB_ID), eq(LogLevelConstant.ERROR), anyString());
+    }
+
+    @Test
+    void testExecuteServiceException() {
+        // mock server exception
+        when(scriptFilesService.getById(SCRIPT_FILE_ID))
+                .thenThrow(new RuntimeException("Database connection error"));
+        when(shardingContext.getShardingItem()).thenReturn(0);
+        when(shardingContext.getShardingTotalCount()).thenReturn(1);
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                                                  () -> runScriptJob.execute(shardingContext)
+        );
+
+        assertEquals("Database connection error",
+                     exception.getCause()
+                             .getMessage()
+        );
+
+        // verify execution time updated
+        verify(jobInfoService).updateJobExecutionTime(JOB_ID, CRON);
     }
 
     @Test
@@ -236,6 +264,7 @@ class RunScriptJobTest {
                 CRON,
                 SCRIPT_FILE_ID,
                 null,
+                jobInfoService,
                 scriptFilesService,
                 jobLogService
         );
@@ -255,6 +284,7 @@ class RunScriptJobTest {
                 CRON,
                 SCRIPT_FILE_ID,
                 "", // empty command args
+                jobInfoService,
                 scriptFilesService,
                 jobLogService
         );
@@ -300,10 +330,11 @@ class RunScriptJobTest {
         // create two job instances to simulate two executions
         RunShellScriptJob job1 = new RunShellScriptJob(
                 JOB_ID, JOB_NAME, CRON, SCRIPT_FILE_ID, COMMAND_ARGS,
-                scriptFilesService, jobLogService
+                jobInfoService, scriptFilesService, jobLogService
         );
         RunShellScriptJob job2 = new RunShellScriptJob(
-                JOB_ID, JOB_NAME, CRON, SCRIPT_FILE_ID, COMMAND_ARGS, scriptFilesService, jobLogService
+                JOB_ID, JOB_NAME, CRON, SCRIPT_FILE_ID, COMMAND_ARGS,
+                jobInfoService, scriptFilesService, jobLogService
         );
 
         assertDoesNotThrow(() -> {
@@ -323,6 +354,34 @@ class RunScriptJobTest {
             assertNotNull(id);
             assertTrue(id.matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"));
         });
+    }
+
+    @Test
+    void testUpdateExecuteTime() {
+        // test execution with command line arguments
+        ScriptFiles scriptFiles = createTestScriptFiles("#!/bin/bash\necho $1 $2");
+
+        when(scriptFilesService.getById(SCRIPT_FILE_ID)).thenReturn(scriptFiles);
+        when(shardingContext.getShardingItem()).thenReturn(0);
+        when(shardingContext.getShardingTotalCount()).thenReturn(3);
+
+        assertDoesNotThrow(() -> runScriptJob.execute(shardingContext));
+
+        verify(jobInfoService).updateJobExecutionTime(JOB_ID, CRON);
+    }
+
+    @Test
+    void testDoNotUpdateExecuteTime() {
+        // test execution with command line arguments
+        ScriptFiles scriptFiles = createTestScriptFiles("#!/bin/bash\necho $1 $2");
+
+        when(scriptFilesService.getById(SCRIPT_FILE_ID)).thenReturn(scriptFiles);
+        when(shardingContext.getShardingItem()).thenReturn(1);
+        when(shardingContext.getShardingTotalCount()).thenReturn(3);
+
+        assertDoesNotThrow(() -> runScriptJob.execute(shardingContext));
+
+        verify(jobInfoService, never()).updateJobExecutionTime(JOB_ID, CRON);
     }
 
     /**

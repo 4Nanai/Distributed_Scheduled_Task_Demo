@@ -22,11 +22,14 @@ import org.apache.shardingsphere.elasticjob.lite.api.bootstrap.impl.ScheduleJobB
 import org.apache.shardingsphere.elasticjob.reg.base.CoordinatorRegistryCenter;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -112,6 +115,7 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
                                                                cron,
                                                                scriptId,
                                                                commandArgs,
+                                                               this,
                                                                scriptFilesService,
                                                                jobLogService
         );
@@ -165,6 +169,18 @@ public class JobInfoServiceImpl extends ServiceImpl<JobInfoMapper, JobInfo>
         JobDetailVO jobDetailVO = new JobDetailVO();
         BeanUtils.copyProperties(jobInfo, jobDetailVO);
         return jobDetailVO;
+    }
+
+    @Override
+    public void updateJobExecutionTime(Long jobId, String cron) {
+        CronExpression cronExpression = CronExpression.parse(cron);
+
+        // get current time in UTC
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        LocalDateTime nextUtc = cronExpression.next(nowUtc);
+
+        this.getBaseMapper()
+                .updateJobExecutionTime(jobId, nowUtc, nextUtc);
     }
 
     private void notifyOtherInstances(JobRegistryDTO jobRegistryDTO) {

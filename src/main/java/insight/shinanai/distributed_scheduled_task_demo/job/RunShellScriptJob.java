@@ -3,6 +3,7 @@ package insight.shinanai.distributed_scheduled_task_demo.job;
 import com.google.common.base.Charsets;
 import insight.shinanai.distributed_scheduled_task_demo.constant.LogLevelConstant;
 import insight.shinanai.distributed_scheduled_task_demo.domain.ScriptFiles;
+import insight.shinanai.distributed_scheduled_task_demo.service.JobInfoService;
 import insight.shinanai.distributed_scheduled_task_demo.service.JobLogService;
 import insight.shinanai.distributed_scheduled_task_demo.service.ScriptFilesService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class RunShellScriptJob implements SimpleJob {
     private final String cron;
     private final Long scriptFileId;
     private final String commandArgs;
+    private final JobInfoService jobInfoService;
     private final ScriptFilesService scriptFilesService;
     private final JobLogService jobLogService;
     private final String executionId;
@@ -47,6 +49,7 @@ public class RunShellScriptJob implements SimpleJob {
                              String cron,
                              Long scriptFileId,
                              String commandArgs,
+                             JobInfoService jobInfoService,
                              ScriptFilesService scriptFilesService,
                              JobLogService jobLogService) {
         this.jobId = jobId;
@@ -54,6 +57,7 @@ public class RunShellScriptJob implements SimpleJob {
         this.cron = cron;
         this.scriptFileId = scriptFileId;
         this.commandArgs = commandArgs;
+        this.jobInfoService = jobInfoService;
         this.scriptFilesService = scriptFilesService;
         this.jobLogService = jobLogService;
         this.executionId = UUID.randomUUID()
@@ -104,6 +108,13 @@ public class RunShellScriptJob implements SimpleJob {
             throw new RuntimeException(e);
         } finally {
             saveCompleteLogs(shardItem);
+            if (shardItem == 0) {
+                try {
+                    jobInfoService.updateJobExecutionTime(jobId, cron);
+                } catch (Exception e) {
+                    log.error("Failed to update job execution time for jobId: {}", jobId, e);
+                }
+            }
         }
     }
 
