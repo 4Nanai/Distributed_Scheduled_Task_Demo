@@ -32,7 +32,6 @@ public class RunShellScriptJob implements SimpleJob {
     private final String jobName;
     private final String cron;
     private final Long scriptFileId;
-    private int shardItem;
     private final String commandArgs;
     private final ScriptFilesService scriptFilesService;
     private final JobLogService jobLogService;
@@ -69,7 +68,7 @@ public class RunShellScriptJob implements SimpleJob {
      */
     @Override
     public void execute(ShardingContext shardingContext) {
-        this.shardItem = shardingContext.getShardingItem();
+        int shardItem = shardingContext.getShardingItem();
         int totalShard = shardingContext.getShardingTotalCount();
 
         try {
@@ -104,7 +103,7 @@ public class RunShellScriptJob implements SimpleJob {
             log.error(exceptionMessage, e);
             throw new RuntimeException(e);
         } finally {
-            saveCompleteLogs();
+            saveCompleteLogs(shardItem);
         }
     }
 
@@ -218,7 +217,7 @@ public class RunShellScriptJob implements SimpleJob {
     /**
      * Save the complete logs to the database
      */
-    private void saveCompleteLogs() {
+    private void saveCompleteLogs(int shardItem) {
         if (!infoLogBuilder.isEmpty()) {
             String infoLogContent = infoLogBuilder.toString();
             jobLogService.saveCompleteLog(jobId,
